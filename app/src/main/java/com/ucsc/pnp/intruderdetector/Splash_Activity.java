@@ -1,25 +1,48 @@
 package com.ucsc.pnp.intruderdetector;
 
 import android.app.ProgressDialog;
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
+import android.util.Base64;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.widget.ImageView;
+import android.widget.Toast;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 public class Splash_Activity extends AppCompatActivity {
     ProgressDialog progDailog;
+    ImageView IntruderImage;
+    IntruderReceiver intruderReceiver;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_splash_);
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
+        IntruderImage=(ImageView)findViewById(R.id.IntruderImage);
+        progDailog=ProgressDialog.show(this,"Wait", "Loading");
 
-        progDailog=ProgressDialog.show(this,"Wait....", "Loading");
+        startService(new Intent(this, NetLink.class));
+
+        IntentFilter filter = new IntentFilter("com.ucsc.pnp.intruder.CUSTOM");
+
+        intruderReceiver = new IntruderReceiver();
+        registerReceiver(intruderReceiver, filter);
 
 
         new InitLoader().execute();
@@ -27,6 +50,12 @@ public class Splash_Activity extends AppCompatActivity {
 
 
 
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        unregisterReceiver(intruderReceiver);
     }
 
     @Override
@@ -74,4 +103,28 @@ public class Splash_Activity extends AppCompatActivity {
             progDailog.hide();
         }
     }
+
+    class IntruderReceiver extends BroadcastReceiver {
+
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            String jsonmsg = intent.getStringExtra("data");
+            Toast.makeText(getApplicationContext(),"Intruder Alert",Toast.LENGTH_LONG).show();
+            try {
+                JSONObject jsonObject = new JSONObject(jsonmsg);
+                String immg = jsonObject.getString("img");
+                byte[] decodedString = Base64.decode(immg, Base64.DEFAULT);
+                Bitmap decodedByte = BitmapFactory.decodeByteArray(decodedString, 0, decodedString.length);
+                IntruderImage.setImageBitmap(decodedByte);
+
+            } catch (JSONException e) {
+                e.printStackTrace();
+
+            }
+
+
+        }
+    }
+
+
 }
